@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.12)
 project(SocketChatting)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

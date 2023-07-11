@@ -9,6 +9,7 @@
 #include "ftxui/component/screen_interactive.hpp"  // for Component, ScreenInteractive
 #include "ftxui/dom/elements.hpp"  // for text, hbox, separator, Element, operator|, vbox, border
 #include "ftxui/util/ref.hpp"  // for Ref
+#include "ftxui/screen/color.hpp"
 #include <sys/types.h>
 #include <vector>
 #include <sys/socket.h>

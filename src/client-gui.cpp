@@ -10,6 +10,7 @@
 #include "ftxui/dom/elements.hpp"  // for text, hbox, separator, Element, operator|, vbox, border
 #include "ftxui/util/ref.hpp"  // for Ref
 #include "ftxui/screen/color.hpp"
+#include "ftxui/dom/linear_gradient.hpp"
 #include <sys/types.h>
 #include <vector>
 #include <sys/socket.h>
@@ -46,8 +47,8 @@ int main()
 	auto menu = ftxui::Menu(&lines, &selected_line);
 
 	auto my_custom_menu = ftxui::Renderer(menu, [&] {
-			int begin = std::max(0, selected_line - 15);
-			int end = std::min<int>(lines.size(), selected_line + 15);
+			int begin = std::max(0, selected_line - 20);
+			int end = std::min<int>(lines.size(), selected_line + 20);
 			ftxui::Elements elements;
 			for(int i = begin; i<end; ++i) {
 				packaged_msg msg = deserialize_msg(lines[i]);
@@ -92,7 +93,7 @@ int main()
 
 					socket_addr_len = sizeof(socket_addr);
 
-					if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+					if ((socket_fd = socket(AF_INET, SOCK_STREAM , 0)) < 0) {
 						hostname = "Can't create a socket!";
 						return;
 					}
@@ -107,13 +108,11 @@ int main()
 
 					readExecThread = std::thread([&] {
 
-								join_thread = false;
-
 								char read_buffer[1024];
 								ssize_t read_bytes;
 								std::string readMsg;
 								
-								while (((read_bytes = read(socket_fd, read_buffer, 1024)) > 0) && (!join_thread)) {
+								while (((read_bytes = read(socket_fd, read_buffer, 1024)) > 0) && (connected)) {
 
 									readMsg = std::string(read_buffer);
 									lines.push_back(readMsg);
@@ -147,8 +146,7 @@ int main()
 									return;
 								}
 
-								if (join_thread) {
-									write(socket_fd, NULL, 0);
+								if (!connected) {
 									close(socket_fd);
 									screen.PostEvent(ftxui::Event::Custom);
 									return;
@@ -173,7 +171,6 @@ int main()
 				portname = "";
 				connectButtonLabel = "Connect";
 				connected = false;
-				join_thread = true;
 				readExecThread.detach();
 				return;
 			}
@@ -222,15 +219,10 @@ int main()
 					.to = ""
 				};
 				std::string msgToSendSerialized = serialized_msg(msgToSendPackage);
-				write(socket_fd, (msgToSendSerialized + "\n").c_str(), msgToSendSerialized.size() + 1);
+				write(socket_fd, msgToSendSerialized.c_str(), msgToSendSerialized.size());
 				lines.push_back(msgToSendSerialized);
 				selected_line = lines.size()-1;
 				screen.PostEvent(ftxui::Event::Custom);
-				// msgs.push_back(ftxui::window(
-				// 			ftxui::text("user"),
-				// 			ftxui::paragraph(std::string(msgToSend))
-				// 			) | ftxui::inverted
-				// 	      );
 				msgToSend = "";
 			}
 		}
@@ -241,8 +233,7 @@ int main()
 	ftxui::Component rightSide = ftxui::Renderer(ftxui::Container::Vertical({my_custom_menu, inputMsg}), [&] {
 			return ftxui::window(ftxui::text("Chatting Window") | ftxui::bold, 
 					ftxui::vbox({
-						my_custom_menu->Render() | ftxui::flex,
-						//ftxui::vbox(AddFocusBottom(msgs)) | ftxui::vscroll_indicator | ftxui::frame | ftxui::flex | ftxui::focus,
+						my_custom_menu->Render()  | ftxui::color(ftxui::LinearGradient(90, ftxui::Color::DeepPink1, ftxui::Color::DeepSkyBlue1)) | ftxui::flex,
 						ftxui::separator(),
 						inputMsg->Render()
 						})

@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <thread>
 #include <vector>
+#include <fcntl.h>
 #include "packaged_msg.hpp"
 
 #define PORT 6789
@@ -57,17 +58,27 @@ int main()
 		return -1;
 	}
 
+	// The file descriptor of the socket is set to a listening
+	// state to accept or reject new connections
 	if (listen(socket_fd, 5) < 0) {
 		perror("Error while listening");
 		return -1;
 	}
 
+	// Create a new thread to check wether to accept new connections
+	// That way the server and clients can continue communicating 
+	// without being bother who is connecting or disconnecting
 	std::thread connection_thread([&] {
 			int conn_fd;
 			while(true) {
 				
 				if ((conn_fd = accept(socket_fd, (struct sockaddr *) &socket_addr, (socklen_t *) &sock_len)) < 0) {
 					perror("Error while accepting a new connection");
+					return -1;
+				}
+
+				if (fcntl(conn_fd, F_SETFL, fcntl(conn_fd, F_GETFL, 0) | O_NONBLOCK) < 0) {
+					perror("calling fcntl");
 					return -1;
 				}
 
@@ -89,10 +100,13 @@ int main()
 
 		if (pollfds[0].revents & POLLIN) {
 
+			for (int i = 0; i < BUFFSIZE; i++)
+				rdbuffer[i] = '\0';
+
 			read_bytes = read(STDIN_FILENO, rdbuffer, BUFFSIZE);
 
 			if (read_bytes < 0) {
-				perror("Problem while reading");
+				perror("Problem while reading from server's input");
 				return -1;
 			}
 
@@ -101,6 +115,7 @@ int main()
 				break;
 			}
 
+			// Send a message from server in the packaged message format
 			std::string msgToSend(rdbuffer);
 			packaged_msg packagedMsgToSend = {
 				.content = msgToSend,
@@ -113,9 +128,6 @@ int main()
 			for (int i = 1; i < polls; i++)
 				write(pollfds[i].fd, (serializedMsg + "\n").c_str(), serializedMsg.size() + 1);
 
-			for (int i = 0; i < BUFFSIZE; i++)
-				rdbuffer[i] = '\0';
-
 		}
 
 		for (int i = 1; i < polls; i++) {
@@ -127,7 +139,7 @@ int main()
 				read_bytes = read(pollfds[i].fd, rdbuffer, BUFFSIZE);
 
 				if (read_bytes < 0) {
-					perror("Problem while reading");
+					perror("Problem while reading from a client");
 					return -1;
 				}
 
@@ -135,21 +147,24 @@ int main()
 					std::cout << "A client exited\n";
 					pollfds.erase(pollfds.cbegin() + i);
 					polls--;
-					break;
+					continue;
 				}
 
-				write(STDOUT_FILENO, rdbuffer, read_bytes);
+				// Pass the message of a client to the other connected clients
 				for (int j = 1; j < polls; j++)
 					if (j != i)
 						write(pollfds[j].fd, rdbuffer, read_bytes);
 
-				// I could flush the read buffer but fuck that shit
-				// write(conn_fd, servername.c_str(), servername.length());
-				// write(conn_fd, rdbuffer, read_bytes);
+				// DEBUG SECTION
+				// Write the message of a client to the stdout of the server
+				packaged_msg deserializedMsg = deserialize_msg(std::string(rdbuffer));
+				write(STDOUT_FILENO, (deserializedMsg.from + ": ").c_str(), deserializedMsg.from.size() + 2);
+				write(STDOUT_FILENO, deserializedMsg.content.c_str(), deserializedMsg.content.size());
+				// write(STDOUT_FILENO, rdbuffer, read_bytes);
 
 			}
 		}
-		
+
 	}
 
 	for (auto pollstruct : pollfds)

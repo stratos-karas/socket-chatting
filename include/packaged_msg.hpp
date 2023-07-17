@@ -11,9 +11,10 @@ struct packaged_msg {
 	std::string to; 	// TODO: choose the receiver
 };
 
-typedef struct packaged_msg packaged_msg;
+typedef struct packaged_msg PackagedMessaged;
+typedef std::string SerializedMessage;
 
-packaged_msg deserialize_msg(std::string);
-std::string serialized_msg(packaged_msg);
+PackagedMessaged deserialize_msg(SerializedMessage);
+SerializedMessage serialized_msg(PackagedMessaged);
 
 #endif

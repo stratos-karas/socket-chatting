@@ -42,7 +42,8 @@ int main()
 		return -1;
 	}
 	// Change the options of the socket
-	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_KEEPALIVE, &opt, sizeof(opt)) < 0) {
+	//if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_KEEPALIVE, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
 		perror("Error while setting options for the socket");
 		return -1;
 	}
@@ -126,7 +127,7 @@ int main()
 
 			// I could flush the read buffer but fuck that shit
 			for (int i = 1; i < polls; i++)
-				write(pollfds[i].fd, (serializedMsg + "\n").c_str(), serializedMsg.size() + 1);
+				write(pollfds[i].fd, serializedMsg .c_str(), serializedMsg.size());
 
 		}
 
@@ -140,11 +141,13 @@ int main()
 
 				if (read_bytes < 0) {
 					perror("Problem while reading from a client");
+					::close((pollfds.cbegin() + i)->fd);
 					return -1;
 				}
 
 				if (read_bytes == 0) {
 					std::cout << "A client exited\n";
+					::close((pollfds.cbegin() + i)->fd);
 					pollfds.erase(pollfds.cbegin() + i);
 					polls--;
 					continue;

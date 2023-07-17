@@ -1,6 +1,7 @@
 #include "packaged_msg.hpp"
 
-packaged_msg deserialize_msg(std::string serialized_msg) {
+PackagedMessaged deserialize_msg(SerializedMessage serialized_msg) 
+{
 
 	std::string content;
 	std::string from;
@@ -32,7 +33,8 @@ packaged_msg deserialize_msg(std::string serialized_msg) {
 
 }
 
-std::string serialized_msg(packaged_msg msg) {
+SerializedMessage serialized_msg(packaged_msg msg) 
+{
 
 	std::string serialized_msg;
 
